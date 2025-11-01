@@ -3681,12 +3681,22 @@ static void icnss_populate_gpio_config(struct icnss_priv *priv,
 			     req->gpio_config[gpio_info_type].gpio_bitreserved,
 			     priv->gpio_config_arr[gpio_info_type][WLFW_GPIO_ARRAY_VALID_V01],
 			     priv->gpio_config_arr[gpio_info_type][WLFW_GPIO_OWNER_V01]);
-	} else {
+
+		//Note: Cleanup this section later once FW has stable support for NEW gpio_config structure
 		if (cfg_arr[WLFW_GPIO_NUM_V01]) {
 			req->gpio_info[gpio_info_type] = cfg_arr[WLFW_GPIO_NUM_V01];
 			icnss_pr_dbg("GPIO_NUM: %d", req->gpio_info[gpio_info_type]);
 		} else {
-			req->gpio_info[gpio_info_type] = 0xFFFF;
+			req->gpio_info[gpio_info_type] = QMI_WLFW_GPIO_INVALID_V01;
+		}
+	} else {
+		//support backward compatibilty
+		if (cfg_arr[WLFW_GPIO_NUM_V01]) {
+			req->gpio_info[gpio_info_type] = cfg_arr[WLFW_GPIO_NUM_V01];
+			icnss_pr_dbg("GPIO_NUM: %d", req->gpio_info[gpio_info_type]);
+		} else {
+			req->gpio_info[gpio_info_type] = QMI_WLFW_GPIO_INVALID_V01;
+			req->gpio_config[gpio_info_type].gpio_num = QMI_WLFW_GPIO_INVALID_V01;
 		}
 	}
 }
@@ -3771,13 +3781,14 @@ int wlfw_host_cap_send_sync(struct icnss_priv *priv)
 		if (priv->gpio_config_arr[i][WLFW_GPIO_ARRAY_VALID_V01]) {
 			if (priv->gpio_config_arr[i][WLFW_GPIO_OWNER_V01])
 				icnss_populate_gpio_config(priv, req, i, priv->gpio_config_arr[i]);
+
+			req->gpio_config_valid = 1;
+			req->gpio_config_len = GPIO_TYPE_MAX_V01;
 		} else {
 			icnss_populate_gpio_config(priv, req, i, priv->gpio_config_arr[i]);
 		}
 	}
 
-	req->gpio_config_valid = 1;
-	req->gpio_config_len = GPIO_TYPE_MAX_V01;
 	req->gpio_info_valid = 1;
 	req->gpio_info_len = GPIO_TYPE_MAX_V01;
 
